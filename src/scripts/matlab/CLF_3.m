@@ -1,0 +1,86 @@
+clc; clear; yalmip('clear');
+
+h = 0.2; % Sampling period Ti
+Ad_nom = [1, 0.099591; 0, 0.99005]; 
+Bd_nom = [0.00498337; 0.09950166];
+% Recover continuous matrices
+[Ac, Bc] = d2c(Ad_nom, Bd_nom, h); 
+
+d_test = 0.08; % Delay delta
+decay = 0.95;
+Q_aug = diag([5, 1, 1]); % Weights for [pos, vel, u_prev]
+R_aug = 1;
+
+getDiscrete = @(t) expm([Ac, Bc; zeros(1, 3)] * t); %Discretize the plant
+
+res_h = getDiscrete(h);
+Phi = res_h(1:2, 1:2);   %Compute Phi
+Gamma_h = res_h(1:2, 3);  %Compuite Gamma 
+
+A1 = [Phi, zeros(2,1); zeros(1,3)]; % Gamma1(0) = 0, % Gamma0(0) = Gamma(h)
+B1 = [Gamma_h; 1];                  
+K1 = dlqr(A1, B1, Q_aug, R_aug);    % Optimal gain K
+Acl1 = A1 - B1*K1;
+
+%Subsystem2:delayed
+res_h_delta = getDiscrete(h - d_test);
+Gamma0_del = res_h_delta(1:2, 3);        % Gamma0(delta), % Gamma1(delta)
+Gamma1_del = Gamma_h - Gamma0_del;       
+
+% Augmented matrices
+A2 = [Phi, Gamma1_del; zeros(1,3)];
+B2 = [Gamma0_del; 1];
+K2 = dlqr(A2, B2, Q_aug, R_aug);
+Acl2 = A2 - B2*K2;
+
+%% Stability Verification (Common Lyapunov Function)
+Pm = sdpvar(3,3);
+C = [Pm >= 1e-4*eye(3)];
+C = [C, Acl1'*Pm*Acl1 <= decay*Pm];
+C = [C, Acl2'*Pm*Acl2 <= decay*Pm];
+
+sol = optimize(C, [], sdpsettings('solver','mosek','verbose',1));
+if sol.problem ~= 0, error('CLF NOT found.'); end
+fprintf('CLF Found. System is stable under switching.\n');
+
+SimSteps = 100;
+switch_step = 10; 
+time = (0:SimSteps-1)*h;
+x_state = [10; 2]; u_prev = 0; % z[k] = [x[k]; u[k-1]]
+X_log = zeros(2, SimSteps); U_log = zeros(1, SimSteps);
+
+for k = 1:SimSteps
+    X_log(:,k) = x_state;
+    z = [x_state; u_prev]; % Augmented state vector (Eq 4)
+    
+    if k < switch_step
+        Ak = A1; Bk = B1; Kk = K1;
+    else
+        Ak = A2; Bk = B2; Kk = K2;
+    end
+    
+    uk = -Kk * z; % Control Law: u[k] = -K*z[k]
+    U_log(k) = uk;
+    
+    % Update Augmented State z[k+1] = Ak*z[k] + Bk*uk
+    z_next = Ak*z + Bk*uk;
+    x_state = z_next(1:2);
+    u_prev = uk; 
+end
+
+ISE = sum(X_log(1,:).^2)*h;
+Effort = sum(U_log.^2)*h;
+fprintf('\n--- Performance Metrics ---\n');
+fprintf('ISE (Position): %.4f\n', ISE);
+fprintf('Control Effort: %.4f\n', Effort);
+
+figure('Color','w');
+subplot(2,1,1);
+plot(time, X_log(1,:), 'b', 'LineWidth', 2); hold on;
+xline(time(switch_step), '--r', 'Switch Instance');
+grid on; ylabel('Position (m)'); title('Switch Once for max delay');
+
+subplot(2,1,2);
+stairs(time, U_log, 'k', 'LineWidth', 1.5); hold on;
+xline(time(switch_step), '--r');
+grid on; ylabel('Control Input (N)'); xlabel('Time (s)');
