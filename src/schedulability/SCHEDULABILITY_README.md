@@ -26,23 +26,25 @@ This experiment evaluates schedulability of real-time task sets with victim task
   - Can be used standalone or imported
 
 ### Output Files
-- **`schedulability_results.csv`** - Experiment data
+- **`../../output/schedulability_<n_tasks>.csv`** - Experiment data
   - Columns: Util_Range, Util_Midpoint, HP_Schedulability, MP_Schedulability, LP_Schedulability
-- **`schedulability_plot.png`** - Standard resolution plot
-- **`schedulability_plot_hires.png`** - High resolution (300 DPI) plot
-- **`schedulability_plot.fig`** - MATLAB figure file (editable)
+- **`../../plot/schedulability_<n_tasks>_plot.png`** - Standard resolution plot
+- **`../../plot/schedulability_<n_tasks>_plot_hires.png`** - High resolution (300 DPI) plot
+- **`../../plot/schedulability_<n_tasks>_plot.fig`** - MATLAB figure file (editable)
 
 ## Usage
 
 ### Step 1: Run Python Experiment
 ```bash
-python schedulability_fnal.py
+python schedulability_fnal.py <n_tasks>
 ```
+
+Example: `python schedulability_fnal.py 10`
 
 This will:
 - Generate 100 task sets per utilization range (default)
 - Test schedulability with victims from HP, MP, and LP groups
-- Save results to `schedulability_results.csv`
+- Save results to `../../output/schedulability_<n_tasks>.csv`
 - Display a matplotlib plot
 - **Ask if you want to run MATLAB script automatically**
 
@@ -55,7 +57,7 @@ plot_schedulability_results
 ```
 
 This will:
-- Read `schedulability_results.csv`
+- Read `../../output/schedulability_<n_tasks>.csv` (or the file passed via workspace)
 - Generate plots showing HP > MP > LP schedulability
 - Display statistics in console
 - Save figures in multiple formats
@@ -81,7 +83,7 @@ NUM_SETS_PER_GROUP = 1000               # Task sets per utilization group
 
 In the main section:
 ```python
-n_tasks = 11  # Number of tasks per set
+# The number of tasks per set (n_tasks) is now provided as a command-line argument.
 util_ranges = [(0.02,0.08), (0.12,0.18), ...]  # Utilization ranges
 ```
 

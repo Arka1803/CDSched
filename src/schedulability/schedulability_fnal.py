@@ -12,6 +12,7 @@ Steps:
   5. Plot % schedulable vs utilization group for HP/MP/LP victims.
 """
 
+import argparse
 import numpy as np
 import math
 import random
@@ -22,9 +23,9 @@ import os
 from typing import List, Tuple
 
 # === PARAMETERS you can edit ===
-P_S = [5, 10, 20, 50, 100, 200, 1000]  # allowed periods
-E_MIN, E_MAX = 1, 50  # integer WCET range
-NUM_SETS_PER_GROUP = 1000
+P_S = [5, 10, 20, 50, 100, 200, 500, 1000]  # allowed periods
+E_MIN, E_MAX = 1, 30  # integer WCET range
+NUM_SETS_PER_GROUP = 100
 d_search_max = max(P_S)  # search δ from 0..d_search_max (integer)
 # =================================
 
@@ -241,18 +242,30 @@ def plot_results(labels, results_array):
 # ---------- Main ----------
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Experiment script for Δ_peak schedulability test")
+    parser.add_argument("n_tasks", type=int, help="Number of tasks per set")
+    args = parser.parse_args()
+    
     # Example usage (replace with your own ranges)
     util_ranges = [
         (0.02,0.08),(0.12,0.18),(0.22,0.28),
         (0.32,0.38),(0.42,0.48),(0.52,0.58),
         (0.62,0.68),(0.72,0.78),(0.82,0.88),(0.92,0.98)
     ]
-    n_tasks = 15  # user-provided number of tasks per set
+    n_tasks = args.n_tasks
     labels, results, df = run_experiment(util_ranges, n_tasks, sets_per_group=100)
     
-    # Save results to CSV
-    csv_filename = 'schedulability_results.csv'
+    # Save results to CSV robustly regardless of current execution directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    output_dir = os.path.join(project_root, 'output')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    csv_filename = os.path.join(output_dir, f'schedulability_{n_tasks}.csv')
     df.to_csv(csv_filename, index=False)
+    
+    # Pre-format path safely for MATLAB to prevent escape character injection
+    csv_filename_matlab = csv_filename.replace('\\', '/')
     print(f"\n✓ Results saved to {csv_filename}")
     
     # Plot results with matplotlib
@@ -272,8 +285,10 @@ if __name__ == "__main__":
             try:
                 # Try to run MATLAB script
                 # -batch runs without GUI, -r runs a command
+                matlab_cmd = f"csv_filename='{csv_filename_matlab}'; plot_schedulability_results"
                 result = subprocess.run(
-                    ['matlab', '-batch', 'plot_schedulability_results'],
+                    ['matlab', '-batch', matlab_cmd],
+                    cwd=script_dir,
                     capture_output=True,
                     text=True,
                     timeout=120  # 2 minute timeout
