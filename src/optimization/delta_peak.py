@@ -170,18 +170,47 @@ def compute_delta_peak_for_taskset(tasks, step_ms=1):
 
     return results
 
+import sys
+import os
+
+def load_tasks_from_file(filepath):
+    """
+    Parses an input file for tasks.
+    Expected format per line:
+    name, T, C, D, Omega, Delta_peak, type
+    """
+    tasks = []
+    with open(filepath, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            parts = [p.strip() for p in line.split(',')]
+            if len(parts) >= 7:
+                name = parts[0]
+                T = int(parts[1])
+                C = int(parts[2])
+                D = int(parts[3])
+                Omega = int(parts[4]) if parts[4] != 'None' else None
+                Delta = int(parts[5]) if parts[5] != 'None' else None
+                typ = parts[6]
+                tasks.append((name, T, C, D, Omega, Delta, typ))
+    return tasks
+
 # ---------- Example usage ----------
 if __name__ == "__main__":
-    tasks = [
-        ("tau1", 10, 2, 10, 10, None, "control"),   # TTC
-        ("tau2", 40, 3, 40, 7,  None, "control"),   # ESP
-        ("tau3", 20, 2, 20, 5,  None, "control"),   # CC
-        ("tau4",100, 5,100, None, None, "nonctrl"),
-        ("tau5",100, 4,100, None, None, "nonctrl"),
-        ("tau6",40,  2,40,  None, None, "nonctrl"),
-    ]
+    if len(sys.argv) > 1:
+        filepath = sys.argv[1]
+    else:
+        filepath = os.path.join(os.path.dirname(__file__), "input.txt")
+
+    if not os.path.exists(filepath):
+        print(f"Error: Could not find '{filepath}'. Please create one or provide a valid path.")
+        sys.exit(1)
+        
+    tasks = load_tasks_from_file(filepath)
 
     res = compute_delta_peak_for_taskset(tasks, step_ms=1)
-    print("Computed Δ^peak per control task (ms):")
+    print("Computed Delta_peak per control task (ms):")
     for k, v in res.items():
         print(f"  {k} -> {v} ms")
