@@ -266,7 +266,7 @@ if __name__ == "__main__":
     
     # Pre-format path safely for MATLAB to prevent escape character injection
     csv_filename_matlab = csv_filename.replace('\\', '/')
-    print(f"\n✓ Results saved to {csv_filename}")
+    print(f"\n[OK] Results saved to {csv_filename}")
     
     # Plot results with matplotlib
     plot_results(labels, results)

@@ -6,10 +6,31 @@ This module implements the core optimization algorithms for **CDSched**, a secur
 
 ---
 
+## System Requirements & Prerequisites
+
+- **Python:** Version 3.10 or newer.
+- **MATLAB:** Must be installed and accessible globally via your system PATH.
+- **Gurobi Optimizer:** Must be installed.
+- **Licenses:** Active Academic or Commercial licenses for both **MATLAB** and **Gurobi** are strictly required to compute analytical optimization frameworks natively.
+
+---
+
 ## Quick Start Guide
 
-### 0. Install Requirements
-Run standard pip instruction to install requisite python modules globally for all scripts:
+### 0. Environment Setup & Requirements
+It is highly recommended to configure an isolated Python virtual environment before deploying to prevent system congestion.
+
+**1. Create a Virtual Environment:**
+```bash
+python -m venv venv
+```
+
+**2. Activate the Environment:**
+- **Windows:** `venv\Scripts\activate`
+- **macOS/Linux:** `source venv/bin/activate`
+
+**3. Install the Modules:**
+Once activated, comprehensively install the requisite execution dependencies:
 ```bash
 pip install -r requirements.txt
 ```
