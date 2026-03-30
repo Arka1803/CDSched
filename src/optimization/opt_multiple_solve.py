@@ -22,48 +22,58 @@ def compute_wcrt(fp_task, hp_tasks, C_self, D_self, max_iter=1000):
         R = R_next
     return R
 
-# tasks = [
-#     ("tau1",10, 2, 10,  8, 3, "control"),   # TTC
-#     ("tau2",40, 3, 40,  7, 12,  "control"),   # ESP
-#     ("tau3",20, 2, 20, 5, 8,  "control"),   # CC
-#     ("tau4",100, 5,100,  None, None, "nonctrl"),
-#     ("tau5",100, 4 ,100,  None, None, "nonctrl"),
-#     ("tau6",40,  2,40,   None, None, "nonctrl")
-# ]
-tasks = [
-    ("tau1",10, 2, 10,  2,3, "control"),   # TTC
-    ("tau2",40, 3, 40,  3, 12,  "control"),   # ESP
-    ("tau3",20, 2, 20, 5, 8,  "control"),   # CC
-    ("tau4",100, 5,100,  None, None, "nonctrl"),
-    ("tau5",100, 4 ,100,  None, None, "nonctrl"),
-    ("tau6",40,  2,40,   None, None, "nonctrl")
-]
+def load_tasks_from_file(filepath):
+    tasks = []
+    with open(filepath, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            parts = [p.strip() for p in line.split(',')]
+            if len(parts) >= 7:
+                name = parts[0]
+                T = int(parts[1])
+                C = int(parts[2])
+                D = int(parts[3])
+                Omega = int(parts[4]) if parts[4] != 'None' else None
+                Delta = float(parts[5]) if parts[5] != 'None' else None
+                typ = parts[6]
+                tasks.append((name, T, C, D, Omega, Delta, typ))
+    return tasks
 
+def setup_globals(loaded_tasks):
+    global tasks, periods, H, releases, WCRT_upper, priority_order
+    tasks = loaded_tasks
+    periods = [t[1] for t in tasks]
+    H = lcm_list(periods)
 
-periods = [t[1] for t in tasks]
-H = lcm_list(periods)
+    releases = {}
+    for (name,T,C,D,Omega,Delta_peak,typ) in tasks:
+        N = H // T
+        releases[name] = [k*T for k in range(N)]
 
-releases = {}
-for (name,T,C,D,Omega,Delta_peak,typ) in tasks:
-    N = H // T
-    releases[name] = [k*T for k in range(N)]
+    sorted_by_period = sorted(tasks, key=lambda x: x[1])
+    priority_order = {t[0]: idx for idx,t in enumerate(sorted_by_period)}
 
-sorted_by_period = sorted(tasks, key=lambda x: x[1])
-priority_order = {t[0]: idx for idx,t in enumerate(sorted_by_period)}
+    WCRT_upper = {}
+    for (name,T,C,D,Omega,Delta_peak,typ) in tasks:
+        hp = []
+        for (hn, hT, hC, hD, hOmega, hDelta_peak, htyp) in tasks:
+            if priority_order[hn] < priority_order[name]:
+                hp.append((hC, hT))
+        WCRT_upper[name] = compute_wcrt(name, hp, C, D)
 
-WCRT_upper = {}
-for (name,T,C,D,Omega,Delta_peak,typ) in tasks:
-    hp = []
-    for (hn, hT, hC, hD, hOmega, hDelta_peak, htyp) in tasks:
-        if priority_order[hn] < priority_order[name]:
-            hp.append((hC, hT))
-    WCRT_upper[name] = compute_wcrt(name, hp, C, D)
-
-def solve_for_victim_multiple(victim_name, W, q):
-    v_task = next(t for t in tasks if t[0]==victim_name)
+def solve_for_victim_multiple(victim_name, W, q, delta_max_override=None):
+    v_task = next((t for t in tasks if t[0]==victim_name), None)
+    if not v_task:
+        raise ValueError(f"Task {victim_name} not found in tasks array.")
     _, Tv, Cv, Dv, Omega_v, Delta_peak_v, _ = v_task
+    
+    if delta_max_override is not None:
+        Delta_peak_v = delta_max_override
+        
     if Delta_peak_v is None:
-        raise ValueError("No Delta_peak provided for victim")
+        raise ValueError("No Delta_peak provided for victim in file or arguments.")
     Ni = H // Tv
     r_v = releases[victim_name]
 
@@ -211,28 +221,37 @@ def solve_for_victim_multiple(victim_name, W, q):
     return sequences
 
 if __name__ == "__main__":
-    import sys
+    import argparse
+    import os
     
-    if len(sys.argv) == 3:
-        W = int(sys.argv[1])
-        q = int(sys.argv[2])
-    else:
-        try:
-            W = int(input("Enter number of optimal sequences (W): "))
-            q = int(input("Enter number of vulnerable instances to optimize (q): "))
-        except ValueError:
-            print("Invalid input, using default W=3, q=2")
-            W, q = 3, 2
+    parser = argparse.ArgumentParser(description="Multiple Sequence Optimization")
+    parser.add_argument('-f', '--file', type=str, default="input.txt", help="Path to input tasks file")
+    parser.add_argument('-v', '--victim', type=str, required=True, help="Victim task ID (e.g., tau1)")
+    parser.add_argument('-q', type=int, required=True, help="Number of vulnerable instances to optimize")
+    parser.add_argument('-W', type=int, required=True, help="Number of optimal sequences to generate")
+    parser.add_argument('-d', '--delta_max', type=float, default=None, help="Override Delta_max value (otherwise reads 6th col from file)")
+    
+    args = parser.parse_args()
+    
+    filepath = args.file
+    if not os.path.exists(filepath):
+        # Fallback to appending script directory
+        filepath = os.path.join(os.path.dirname(__file__), args.file)
+        if not os.path.exists(filepath):
+            print(f"Error: Could not find '{args.file}'.")
+            sys.exit(1)
             
-    print(f"\nRunning Multiple Sequence Optimization with W={W}, q={q}")
-    for (name,_,_,_,_,_,typ) in tasks:
-        if typ != "control": continue
-        if name != "tau1": continue # Based on the original opt.py filtering
+    loaded_tasks = load_tasks_from_file(filepath)
+    setup_globals(loaded_tasks)
+            
+    print(f"\nRunning Multiple Sequence Optimization for {args.victim} with W={args.W}, q={args.q}")
+    if args.delta_max is not None:
+        print(f"Using explicitly provided Delta_max: {args.delta_max}")
         
-        seqs = solve_for_victim_multiple(name, W, q)
-        
-        print(f"\n===========================================")
-        print(f"Final W={len(seqs)} Sequences for {name}:")
-        for i, (seq, dec_pct, tot_ov) in enumerate(seqs):
-            print(f"Seq {i+1} [Overlap: {tot_ov:.2f} ms, Decrease: {dec_pct:.2f}%]: {['{:.3f}'.format(x) for x in seq]}")
-        print(f"===========================================\n")
+    seqs = solve_for_victim_multiple(args.victim, args.W, args.q, delta_max_override=args.delta_max)
+    
+    print(f"\n===========================================")
+    print(f"Final W={len(seqs)} Sequences for {args.victim}:")
+    for i, (seq, dec_pct, tot_ov) in enumerate(seqs):
+        print(f"Seq {i+1} [Overlap: {tot_ov:.2f} ms, Decrease: {dec_pct:.2f}%]: {['{:.3f}'.format(x) for x in seq]}")
+    print(f"===========================================\n")

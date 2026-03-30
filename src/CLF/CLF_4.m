@@ -1,80 +1,56 @@
 clc; clear; yalmip('clear');
-
-%% 1. Plant Definition
-h = 0.2; 
+h = 0.02; 
 Ad_nom = [1, 0.099591; 0, 0.99005]; 
 Bd_nom = [0.00498337; 0.09950166];
 [Ac, Bc] = d2c(Ad_nom, Bd_nom, h);
 
-%% 2. Design Two Subsystems
-d_test = 0.05; % Delay for the second subsystem
-decay = 0.85; % xnew = x_old * decay
-Q_aug = diag([5, 1, 1]); R_aug = 1;
+% --- THE CHANGE: Tighten the Decay Rate ---
+% If decay is 0.84, it's very easy to satisfy. 
+% Let's see what the actual eigenvalues are.
+decay = 0.6276558699; 
+d_design = 0.001; 
+Q_aug = diag([50, 10, 1]); R_aug = 0.1; % Higher gain makes it more sensitive
 
-% Subsystem 1: Nominal (d=0)
-A1 = [Ad_nom, Bd_nom; zeros(1,3)];
-B1 = [zeros(2,1); 1];
-K1 = dlqr(A1, B1, Q_aug, R_aug);
-Acl1 = A1 - B1*K1;
+% Subsystem 1: Nominal
+A1_nom = [Ad_nom, Bd_nom; zeros(1,3)];
+B1_nom = [zeros(2,1); 1];
+K1 = dlqr(A1_nom, B1_nom, Q_aug, R_aug);
+Acl1 = A1_nom - B1_nom*K1;
+rho1 = max(abs(eig(Acl1)))^2;
 
-% Subsystem 2: Delayed (d=d_test)
-sys_c = ss(Ac, Bc, eye(2), 0);
-sys_c.InputDelay = d_test;
-sys_d = absorbDelay(c2d(sys_c, h));
-[A2, B2] = ssdata(sys_d);
-K2 = dlqr(A2, B2, Q_aug, R_aug);
-Acl2 = A2 - B2*K2;
+% Subsystem 2 Design
+sys_c_design = ss(Ac, Bc, eye(2), 0);
+sys_c_design.InputDelay = d_design;
+sys_d_design = absorbDelay(c2d(sys_c_design, h));
+[A2_design, B2_design] = ssdata(sys_d_design);
+K2_fixed = dlqr(A2_design, B2_design, Q_aug, R_aug);
 
-%% 3. Stability Verification (CLF)
-Pm = sdpvar(3,3);
-C = [Pm >= 1e-4*eye(3)];
-C = [C,  '*Pm*Acl1 <= decay*Pm];
-C = [C, Acl2'*Pm*Acl2 <= decay*Pm];
+fprintf('System 1 Natural Decay (rho): %.4f\n', rho1);
+fprintf('Target Decay Rate: %.4f\n\n', decay);
 
-sol = optimize(C, [], sdpsettings('solver','mosek','verbose',0));
-if sol.problem ~= 0, error('CLF NOT found for this delay and decay rate.'); end
-fprintf('CLF Found. System is stable under switching.\n');
-
-%% 4. Simulation (One-time switch at step 10)
-SimSteps = 60;
-switch_step = 10; % Switch at t = 2.0s
-time = (0:SimSteps-1)*h;
-x_state = [5; 2]; u_prev = 0;
-X_log = zeros(2, SimSteps); U_log = zeros(1, SimSteps);
-
-for k = 1:SimSteps
-    X_log(:,k) = x_state;
-    z = [x_state; u_prev];
+current_delay = 0.001; 
+while current_delay <= 0.009
+    sys_c_actual = ss(Ac, Bc, eye(2), 0);
+    sys_c_actual.InputDelay = current_delay;
+    sys_d_actual = absorbDelay(c2d(sys_c_actual, h));
+    [A_actual, B_actual] = ssdata(sys_d_actual);
     
-    if k < switch_step
-        Ak = A1; Bk = B1; Kk = K1;
+    Acl2_actual = A_actual - B_actual * K2_fixed;
+    rho2 = max(abs(eig(Acl2_actual)))^2;
+    
+    % --- THE LMI ---
+    Pm = sdpvar(3,3);
+    Constraints = [Pm >= 1e-4*eye(3)];
+    Constraints = [Constraints, Acl1'*Pm*Acl1 <= decay*Pm];
+    Constraints = [Constraints, Acl2_actual'*Pm*Acl2_actual <= decay*Pm];
+    
+    sol = optimize(Constraints, [], sdpsettings('solver','mosek','verbose',0));
+    
+    if sol.problem == 0
+        fprintf('Delay %.3fs | rho2: %.4f | CLF: YES\n', current_delay, rho2);
+        current_delay = current_delay + 0.001;
     else
-        Ak = A2; Bk = B2; Kk = K2;
+        fprintf('Delay %.3fs | rho2: %.4f | CLF: NO (FAILED)\n', current_delay, rho2);
+        break;
     end
-    
-    uk = -Kk * z;
-    U_log(k) = uk;
-    
-    z_next = Ak*z + Bk*uk;
-    x_state = z_next(1:2);
-    u_prev = uk;
 end
-
-%% 5. Performance Metrics & Plotting
-ISE = sum(X_log(1,:).^2)*h;
-Effort = sum(U_log.^2)*h;
-
-fprintf('\n--- Performance Metrics ---\n');
-fprintf('ISE (Position): %.4f\n', ISE);
-fprintf('Control Effort: %.4f\n', Effort);
-
-figure('Color','w');
-subplot(2,1,1);
-plot(time, X_log(1,:), 'b', 'LineWidth', 2); hold on;
-xline(time(switch_step), '--r', 'Switch Instance');
-grid on; ylabel('Position (m)'); title('Single-Switch Response (Nominal to Delayed)');
-
-subplot(2,1,2);
-stairs(time, U_log, 'k', 'LineWidth', 1.5); hold on;
-xline(time(switch_step), '--r');
-grid on; ylabel('Force (N)'); xlabel('Time (s)');
