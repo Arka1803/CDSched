@@ -2,23 +2,23 @@
 
 > **Control-Task Delay Scheduling for Real-Time Security**
 
-This module implements the core optimization algorithms for **CDSched**, a security-aware scheduling framework that protects control tasks from untrusted workloads through strategic delay injection.
+This codebase is used for the core optimization algorithms for **CDSched**, a security-aware scheduling framework that protects control tasks from untrusted workloads through strategic delay injection.
 
 ---
 
 ## System Requirements & Prerequisites
 
 - **Python:** Version 3.10 or newer.
-- **MATLAB:** Must be installed and accessible globally via your system PATH.
+- **MATLAB:** Must be installed and accessible globally via system PATH.
 - **Gurobi Optimizer:** Must be installed.
-- **Licenses:** Active Academic or Commercial licenses for both **MATLAB** and **Gurobi** are strictly required to compute analytical optimization frameworks natively.
+- **Licenses:** Active Academic or Commercial licenses for both **MATLAB** and **Gurobi** are required to compute analytical optimization frameworks natively.
 
 ---
 
 ## Quick Start Guide
 
 ### 0. Environment Setup & Requirements
-It is highly recommended to configure an isolated Python virtual environment before deploying to prevent system congestion.
+It is recommended to create a Python virtual environment.
 
 **1. Create a Virtual Environment:**
 ```bash
