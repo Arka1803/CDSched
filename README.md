@@ -9,16 +9,16 @@ This codebase is used for the core optimization algorithms for **CDSched**, a se
 ## System Requirements & Prerequisites
 
 - **Python:** Version 3.10 or newer.
-- **MATLAB:** Must be installed and accessible globally via system PATH.
+- **MATLAB:** Version> 2023a Must be installed and accessible globally via system PATH.
 - **Gurobi Optimizer:** Must be installed.
-- **Licenses:** Active Academic or Commercial licenses for both **MATLAB** and **Gurobi** are required to compute analytical optimization frameworks natively.
+- **Licenses:** Active Academic or Commercial licenses for both **MATLAB** and **Gurobi** are required. 
 
 ---
 
 ## Quick Start Guide
 
 ### 0. Environment Setup & Requirements
-It is recommended to create a Python virtual environment.
+Create a Python virtual environment.
 
 **1. Create a Virtual Environment:**
 ```bash
@@ -29,8 +29,8 @@ python -m venv venv
 - **Windows:** `venv\Scripts\activate`
 - **macOS/Linux:** `source venv/bin/activate`
 
-**3. Install the Modules:**
-Once activated, comprehensively install the requisite execution dependencies:
+**3. Install Dependencies:**
+install the requisite execution dependencies:
 ```bash
 pip install -r requirements.txt
 ```
@@ -39,7 +39,7 @@ pip install -r requirements.txt
 Calculate the specific $\Delta^{peak}$ (Delta Peak) limits for control tasks interacting with untrusted scheduling environments.
 
 **Format Your Data (`src/optimization/input.txt`):**
-Ensure your tasks are populated row-by-row mapping variables identical to this layout before execution.
+Ensure tasks are populated row-by-row mapping variables identical to this layout before execution.
 ```text
 # Expected Format:
 # name, T, C, D, Omega, Delta_peak, type
@@ -93,7 +93,7 @@ python src/schedulability/schedulability_fnal.py 10
 **Generate MATLAB Plots:**
 Immediately following task completion, the script pauses gently and inquiries via the console:
 `Do you want to run MATLAB plotting script? (y/n):`
-Answering `y` engages MATLAB completely seamlessly. 
+Answering `y` generates a plot in folder plot.
 - **Outputs generated:** A collection of highly refined graphical maps (`.png`, `_hires.png`, and `.fig`) seamlessly route into the internal `plot/` folder identically formatted (e.g., `plot/schedulability_10_plot.png`).
 
 ## License
