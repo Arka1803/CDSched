@@ -277,9 +277,10 @@ if __name__ == "__main__":
     
     if run_matlab == 'y':
         matlab_script = 'plot_schedulability_results.m'
+        matlab_script_path = os.path.join(script_dir, matlab_script)
         
-        if not os.path.exists(matlab_script):
-            print(f"✗ MATLAB script '{matlab_script}' not found in current directory.")
+        if not os.path.exists(matlab_script_path):
+            print(f"✗ MATLAB script '{matlab_script}' not found in {script_dir}.")
         else:
             print(f"\nRunning MATLAB script: {matlab_script}")
             try:
