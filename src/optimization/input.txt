@@ -1,7 +1,7 @@
 # Expected Format:
 # name, T, C, D, Omega, Delta_peak, type
 tau1, 10, 2, 10, 2, 3, control
-tau2, 40, 3, 40, 3, 12,  control
+tau2, 40, 3, 40, 7, 12,  control
 tau3, 20, 2, 20, 5, 8,  control
 tau4, 100, 5, 100, None, None, nonctrl
 tau5, 100, 4, 100, None, None, nonctrl
