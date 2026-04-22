@@ -1,16 +1,11 @@
 # ============================================================
-# compute_delta_peak_corrected.py
-# ------------------------------------------------------------
 # Computes Δ_i^peak for control tasks using schedulability
 # analysis as described in the CDSched paper (Eq. 9, 13, 15).
-# ------------------------------------------------------------
-# Author: Arkaprava Sain (corrected implementation)
 # ============================================================
 
 from math import ceil, floor, gcd
 from functools import reduce
 
-# ---------- helper functions ----------
 def lcm(a, b): 
     return a * b // gcd(a, b)
 
@@ -77,7 +72,7 @@ def compute_Rv_k(Cv, Dv_k, r_v_k_prime, hp_tasks, debug=False):
         R = R_next
     return R
 
-# ---------- Lower-priority task WCRT (Eq. 15 corrected) ----------
+# Lower-priority task WCRT
 def compute_lower_task_wcrt(task, tasks, victim, delta):
     """
     Compute WCRT for lower-priority task τ_i under delay δ
@@ -86,7 +81,7 @@ def compute_lower_task_wcrt(task, tasks, victim, delta):
     name, T, C, D, _, _, _ = task
     vname, Tv, Cv, Dv, Ov, _, _ = victim
 
-    # higher priority tasks (RM rule: smaller period)
+    # higher priority tasks
     hp_tasks = [(Cj, Tj) for (n, Tj, Cj, Dj, Oj, Dpk, typ) in tasks if Tj < T and n != vname]
 
     R = C
@@ -105,7 +100,7 @@ def compute_lower_task_wcrt(task, tasks, victim, delta):
         R = R_next
     return R
 
-# ---------- Main Δ^peak computation ----------
+#peak computation 
 def compute_delta_peak_for_taskset(tasks, step_ms=1):
     """
     tasks: list of tuples (name, T, C, D, Omega, Delta_peak_placeholder, type)
@@ -197,7 +192,7 @@ def load_tasks_from_file(filepath):
                 tasks.append((name, T, C, D, Omega, Delta, typ))
     return tasks
 
-# ---------- Example usage ----------
+# Main function
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         filepath = sys.argv[1]

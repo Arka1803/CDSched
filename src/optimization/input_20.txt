@@ -1,0 +1,22 @@
+# Expected Format:
+# name, T, C, D, Omega, Delta_peak, type
+tau1, 10, 1, 10, 2, 4, control
+tau2, 25, 1, 25, 2, 9, control
+tau3, 20, 1, 20, 3, 10, control
+tau4, 10, 1, 10, 1, 8, control
+tau5, 10, 1, 10, 2, 4, control
+tau6, 20, 1, 20, 3, 7, control
+tau7, 400, 15, 400, 46, 60, control
+tau8, 200, 15, 200, None, None, nonctrl
+tau9, 50, 1, 50, None, None, nonctrl
+tau10, 100, 6, 100, None, None, nonctrl
+tau11, 20, 1, 20, 2, 5, control
+tau12, 40, 1, 40, 6, 9, control
+tau13, 25, 1, 25, None, None, nonctrl
+tau14, 10, 1, 10, None, None, nonctrl
+tau15, 40, 3, 40, None, None, nonctrl
+tau16, 25, 1, 25, None, None, nonctrl
+tau17, 200, 10, 200, 27, 44, control
+tau18, 10, 1, 10, None, None, nonctrl
+tau19, 400, 28, 400, 31, 51, control
+tau20, 400, 12, 400, None, None, nonctrl
